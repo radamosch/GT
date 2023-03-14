@@ -494,8 +494,8 @@ async function currentDifferenceFromActionDay() {
   var blockBefore = await ethers.provider.getBlock(blockNumBefore);
   var timestampBefore = blockBefore.timestamp;
   var wk = await stakingContract.getWeek();
-  var ad = await stakingContract.ActionDay();
+
   var info = await stakingContract.getDifferenceFromActionDay();
-  var ts = timestampBefore - Number(ad);
+
   // console.log(timestampBefore, ts, ts / 86400, wk, ad, info);
 }

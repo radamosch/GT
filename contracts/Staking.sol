@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 
 pragma solidity 0.8.17;
-
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./USDT.sol";
-
-// import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface myNFT {
     function balanceOf(address) external view returns (uint256);
@@ -19,19 +15,18 @@ contract Staking is Ownable {
     uint256 public depositFeeBP = 1000; //10%
     uint256 public compoundFeeBP = 500; //5%
     uint256 public withdrawFeeBP = 500; //5%
-    uint256 public withdrawLimit = 10000;
+    uint256 public withdrawLimit = 10000 * 10 ** 18;
     uint256 public startBlock; // The block number when USDT rewards starts.
     uint256 public DROP_RATE = 60; //0.6 % per day
     uint256 public immutable seconds_per_day = 86400;
-    uint256 public immutable Friday = 1678406460; // this is the 1st Friday
-    uint256 public ActionDay = 1678406460; // this is a specific day (starts with Friday)
+    uint256 public immutable Friday = 1678406460; // this is the Friday of initiateAction
     address public NFTaddress; // this is the OG NFT contract address
     address public NFTaddress2; // this is the Whitelist NFT contract address
     uint256 public toClaim; // this is the amount that has to be paid out on Friday
 
     IBEP20 public USDT;
-    myNFT public NFTContract;
-    myNFT public NFTContract2;
+    myNFT NFTContract;
+    myNFT NFTContract2;
     mapping(address => UserInfo) public userInfo;
 
     struct Depo {
@@ -50,10 +45,7 @@ contract Staking is Ownable {
     struct UserInfo {
         Depo[] deposits;
         address WithdrawAddress; //by default msg.sender, can change with changeWithdrawalAddress()
-        uint256 TotalDeposits; // Total USDT the user has provided
-        uint256 TotalWithdrawn; // Total USDT the user has withdrawn
         uint256 NoOfDeposits; // No. of deposits
-        uint256 TotalReinvested; // Total USDT compounded
         uint256 initialDeposit; // Initial deposit, separate cause locked forever
         uint256 NFTId; // the tokenID
     }
@@ -150,7 +142,7 @@ contract Staking is Ownable {
         uint256 depositFee = (_amount * depositFeeBP) / 10000;
 
         // only for 1st deposit
-        if (user.TotalDeposits == 0) {
+        if (user.NoOfDeposits == 0) {
             require(_amount >= 1000 * 10 ** 18, "Minimum deposit is 1000$");
             UsersInfo.push(msg.sender);
             user.initialDeposit += _amount - depositFee;
@@ -201,7 +193,6 @@ contract Staking is Ownable {
         );
 
         USDT.transferFrom(address(msg.sender), EmergencyfeeWallet, depositFee);
-        user.TotalDeposits += _amount - depositFee;
         user.NoOfDeposits += 1;
 
         emit Deposit(msg.sender, _amount);
@@ -377,10 +368,10 @@ contract Staking is Ownable {
             }
 
             // max withdraw is initially 10k USDT, if excess then create new Compounded Deposit
-            if (finalAmount > withdrawLimit * 10 ** 18) {
+            if (finalAmount > withdrawLimit) {
                 user.deposits.push(
                     Depo({
-                        amount: finalAmount - withdrawLimit * 10 ** 18,
+                        amount: finalAmount - withdrawLimit,
                         time: block.timestamp,
                         lastActionTime: block.timestamp,
                         unlocked: 0,
@@ -394,14 +385,13 @@ contract Staking is Ownable {
                 );
 
                 user.NoOfDeposits += 1;
-                finalAmount = withdrawLimit * 10 ** 18;
+                finalAmount = withdrawLimit;
             }
 
             fee = (finalAmount * withdrawFeeBP) / 10000;
             toClaim -= finalAmount;
             USDT.transfer(feeWallet, fee);
             USDT.transfer(user.WithdrawAddress, finalAmount - fee);
-            user.TotalWithdrawn += finalAmount - fee;
             dep.WithdrawInitiated = 0;
             dep.WithdrawDate = 0;
 
@@ -436,7 +426,7 @@ contract Staking is Ownable {
 
     /**
      * @notice function to change withdraw limit
-     * @param _withdrawLimit: 10000 is 10k USDT
+     * @param _withdrawLimit: 10000*10**18 is 10k USDT
      */
     function changeWithdraw_Limit(uint256 _withdrawLimit) external onlyOwner {
         withdrawLimit = _withdrawLimit;
@@ -525,7 +515,7 @@ contract Staking is Ownable {
      * @return 0 means you are on ActionDay, 1 means +1 from ActionDay, 2 means +2 etc
      */
     function getDifferenceFromActionDay() public view returns (uint256) {
-        uint256 totalsec = (block.timestamp - ActionDay); //total sec from friday
+        uint256 totalsec = (block.timestamp - Friday); //total sec from friday
         return totalsec / seconds_per_day - getWeek() * 14; //7 days in a week
     }
 
@@ -603,8 +593,8 @@ contract Staking is Ownable {
                     if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
                 }
             }
-            if (finalAmount > withdrawLimit * 10 ** 18) {
-                finalAmount = withdrawLimit * 10 ** 18;
+            if (finalAmount > withdrawLimit) {
+                finalAmount = withdrawLimit;
             }
 
             return (finalAmount);
