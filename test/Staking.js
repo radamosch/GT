@@ -37,6 +37,7 @@ describe("Staking contract", function () {
     await NFTtokenContract.connect(wallet2).safeMint();
     await NFTtokenContract.safeMint();
     await currentTimeis();
+    console.log(`deposit `);
     await stakingContract.deposit(toBN(depositamount, 18));
     await stakingContract.deposit(toBN(SecondDepositAmount, 18));
 
@@ -151,8 +152,9 @@ describe("Staking contract", function () {
     //await increaseTimeBy(
     //(13 - (await stakingContract.getDifferenceFromActionDay())) * oneday
     //);
+    // console.log(await stakingContract.getDifferenceFromActionDay())
     // await currentDifferenceFromActionDay();
-    await increaseTimeBy(11 * oneday);
+    await increaseTimeBy(10 * oneday);
     // console.log(`not to be reverted`);
     //console.log(await stakingContract.getWeek());
     //console.log(await stakingContract.getDifferenceFromActionDay());
@@ -175,13 +177,14 @@ describe("Staking contract", function () {
 
   it("Should Claim day 118 after deposit, without compounds, correct pending amount", async function () {
     await increaseTimeBy(Increase2 * oneday);
-    await currentTimeis();
+
     var TMDBC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
     pendingbefore = await getPending(0);
 
     expect(await stakingContract.toClaim()).to.equal(
       await stakingContract.returnAmount(0, owner.address)
     );
+    await currentTimeis();
     await expect(stakingContract.Claim(0)).not.to.be.reverted;
 
     var TMDAC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
@@ -194,7 +197,6 @@ describe("Staking contract", function () {
   it("Compound increase deposits correctly", async function () {
     await increaseTimeBy(1 * oneday);
 
-    console.log(`revertedWith`);
     await expect(stakingContract.InitiateAction(0, 0)).revertedWith(
       "wrong Initiate day"
     );
@@ -220,7 +222,7 @@ describe("Staking contract", function () {
     mydeposits = (await stakingContract.userInfo(owner.address)).NoOfDeposits;
 
     await increaseTimeBy(7 * oneday);
-    console.log(await stakingContract.memberDeposit(owner.address, 1));
+    // console.log(await stakingContract.memberDeposit(owner.address, 1));
 
     await expect(stakingContract.InitiateAction(1, 0)).to.be.revertedWith(
       "deposit withdrawn"
