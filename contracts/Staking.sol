@@ -216,6 +216,33 @@ contract Staking is Ownable {
         NFTContract2 = myNFT(_NFT2);
     }
 
+     /**
+     * @notice function to migrate user deposits
+     * @param _user: user address
+     * @param _amount: amount ( MINUS depositfee)
+     * @param date: date of deposit
+     */
+    function createDeposits(address _user, uint256 _amount, uint256 date) external onlyOwner {
+          require(startBlock == 0, "Has started ");
+            UserInfo storage user = userInfo[_user];
+            
+            user.deposits.push(
+            Depo({
+                amount: _amount, // must remove deposit fee
+                time: date,
+                lastActionTime: 0,
+                unlocked: 0,
+                isCompound: 0,
+                WithdrawDate: 0,
+                WithdrawInitiated: 0,
+                ClaimInitiated: 0,
+                CompoundInitiated: 0,
+                lastRewardTimeStamp: 0
+            })
+        );
+        user.NoOfDeposits += 1;
+    }
+
     /**
      * @notice function to intiate a deposit.
      * @param _amount: amount of USDT to deposit
