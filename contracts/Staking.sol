@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.17;
 
-import '@openzeppelin/contracts/access/Ownable.sol';
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IBEP20 {
     /**
@@ -42,7 +42,10 @@ interface IBEP20 {
      *
      * Emits a {Transfer} event.
      */
-    function transfer(address recipient, uint256 amount) external returns (bool);
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
 
     /**
      * @dev Returns the remaining number of tokens that `spender` will be
@@ -51,7 +54,10 @@ interface IBEP20 {
      *
      * This value changes when {approve} or {transferFrom} are called.
      */
-    function allowance(address _owner, address spender) external view returns (uint256);
+    function allowance(
+        address _owner,
+        address spender
+    ) external view returns (uint256);
 
     /**
      * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
@@ -78,7 +84,11 @@ interface IBEP20 {
      *
      * Emits a {Transfer} event.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
@@ -92,7 +102,11 @@ interface IBEP20 {
      * @dev Emitted when the allowance of a `spender` for an `owner` is set by
      * a call to {approve}. `value` is the new allowance.
      */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
 }
 
 interface myNFT {
@@ -181,7 +195,11 @@ contract Staking is Ownable {
     }
 
     modifier onlyActionDay() {
-        require(getDifferenceFromActionDay() == 7, "wrong Action day");
+        require(
+            getDifferenceFromActionDay() >= 7 &&
+                getDifferenceFromActionDay() <= 13,
+            "wrong Action day"
+        );
         _;
     }
 
@@ -216,17 +234,21 @@ contract Staking is Ownable {
         NFTContract2 = myNFT(_NFT2);
     }
 
-     /**
+    /**
      * @notice function to migrate user deposits
      * @param _user: user address
      * @param _amount: amount ( MINUS depositfee)
      * @param date: date of deposit
      */
-    function createDeposits(address _user, uint256 _amount, uint256 date) external onlyOwner {
-          require(startBlock == 0, "Has started ");
-            UserInfo storage user = userInfo[_user];
-            
-            user.deposits.push(
+    function createDeposits(
+        address _user,
+        uint256 _amount,
+        uint256 date
+    ) external onlyOwner {
+        require(startBlock == 0, "Has started ");
+        UserInfo storage user = userInfo[_user];
+
+        user.deposits.push(
             Depo({
                 amount: _amount, // must remove deposit fee
                 time: date,
@@ -258,7 +280,7 @@ contract Staking is Ownable {
             UsersInfo.push(msg.sender);
             user.initialDeposit += _amount - depositFee;
             user.WithdrawAddress = msg.sender;
-            }
+        }
 
         user.deposits.push(
             Depo({
@@ -500,7 +522,7 @@ contract Staking is Ownable {
         accepted = (amount > 0 &&
             ((block.timestamp > time + 28 days &&
                 block.timestamp < time + 60 days) ||
-                (block.timestamp > time + 60 days && unlocked !=0)) &&
+                (block.timestamp > time + 60 days && unlocked != 0)) &&
             // can only do once per 2 weeks
             block.timestamp - lastActiontime > 7 days);
     }
