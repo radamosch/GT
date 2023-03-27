@@ -215,7 +215,9 @@ describe("Staking contract", function () {
     expect(depInfo.WithdrawInitiated).to.equal(1);
 
     // await currentDifferenceFromActionDay();
-    await expect(stakingContract.Compound(1)).revertedWith("wrong Action day");
+    await expect(stakingContract.Compound(1)).revertedWith(
+      "Compound not initialised"
+    );
 
     await increaseTimeBy(77 * oneday);
     await expect(stakingContract.Withdraw(1)).not.to.be.reverted;

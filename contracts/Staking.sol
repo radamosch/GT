@@ -158,7 +158,7 @@ contract Staking is Ownable {
 
     address[] public UsersInfo;
 
-    event AdminTokenRecovery(address tokenRecovered, uint256 amount);
+    event AdminTokenRecovery(address indexed tokenRecovered, uint256 amount);
     event Deposit(address indexed user, uint256 amount);
     event UserClaim(address indexed user, uint256 amount);
     event UserCompound(address indexed user, uint256 amount);
@@ -244,8 +244,8 @@ contract Staking is Ownable {
         address _user,
         uint256 _amount,
         uint256 date
-    ) external onlyOwner {
-        require(startBlock == 0, "Has started ");
+    ) external payable onlyOwner {
+        //  require(startBlock == 0, "Has started ");
         UserInfo storage user = userInfo[_user];
 
         user.deposits.push(
@@ -319,7 +319,7 @@ contract Staking is Ownable {
     ) external onlyInitiateActionDay {
         UserInfo storage user = userInfo[msg.sender];
         Depo storage dep = user.deposits[_deposit];
-        require(dep.amount > 0, "deposit null");
+        require(dep.amount != 0, "deposit null");
         require(block.timestamp > dep.time + 60 days, "not yet");
         require(dep.unlocked == 1, "deposit withdrawn");
         require(
@@ -518,8 +518,8 @@ contract Staking is Ownable {
         uint256 unlocked,
         uint256 lastActiontime
     ) internal view returns (bool accepted) {
-        // any deposit with deposit.amount > 0 and deposit.time between 28 and  60 days or above 60 days and unlocked
-        accepted = (amount > 0 &&
+        // any deposit with deposit.amount != 0 and deposit.time between 28 and  60 days or above 60 days and unlocked
+        accepted = (amount != 0 &&
             ((block.timestamp > time + 28 days &&
                 block.timestamp < time + 60 days) ||
                 (block.timestamp > time + 60 days && unlocked != 0)) &&
@@ -648,7 +648,7 @@ contract Staking is Ownable {
      */
     function pendingReward(
         uint256 _deposit
-    ) public view returns (uint256 USDTReward) {
+    ) external view returns (uint256 USDTReward) {
         UserInfo storage user = userInfo[msg.sender];
         Depo storage dep = user.deposits[_deposit];
         if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
