@@ -144,7 +144,6 @@ contract Staking is Ownable {
         uint256 WithdrawDate; // The day user is able to withdraw funds
         uint256 WithdrawInitiated; // indicates withdraw initiated
         uint256 ClaimInitiated; // indicates claim initiated
-        uint256 CompoundInitiated; // indicates compound initiated
         uint256 lastRewardTimeStamp; // last time user did claim/compound/withdraw
     }
 
@@ -195,11 +194,7 @@ contract Staking is Ownable {
     }
 
     modifier onlyActionDay() {
-        require(
-            getDifferenceFromActionDay() >= 7 &&
-                getDifferenceFromActionDay() <= 13,
-            "wrong Action day"
-        );
+        require(getDifferenceFromActionDay() >= 7, "Only after 7d");
         _;
     }
 
@@ -258,7 +253,6 @@ contract Staking is Ownable {
                 WithdrawDate: 0,
                 WithdrawInitiated: 0,
                 ClaimInitiated: 0,
-                CompoundInitiated: 0,
                 lastRewardTimeStamp: 0
             })
         );
@@ -292,7 +286,6 @@ contract Staking is Ownable {
                 WithdrawDate: 0,
                 WithdrawInitiated: 0,
                 ClaimInitiated: 0,
-                CompoundInitiated: 0,
                 lastRewardTimeStamp: 0
             })
         );
@@ -320,22 +313,20 @@ contract Staking is Ownable {
         UserInfo storage user = userInfo[msg.sender];
         Depo storage dep = user.deposits[_deposit];
         require(dep.amount != 0, "deposit null");
-        require(block.timestamp > dep.time + 60 days, "not yet");
-        require(dep.unlocked == 1, "deposit withdrawn");
+        require(block.timestamp > dep.time + 29 days, "warmup period");
         require(
             dep.WithdrawInitiated == 0 &&
                 dep.ClaimInitiated == 0 &&
-                dep.CompoundInitiated == 0 &&
                 _action < 3,
             "Action already initialised"
         );
         require(
             block.timestamp > dep.lastRewardTimeStamp + 6 days,
-            "already interacted last 2 week"
+            "already interacted last 6d"
         );
 
         if (_action == 0) {
-            dep.CompoundInitiated = 1;
+            Compound(_deposit);
             emit CompoundIsInitiated(msg.sender, block.timestamp);
         }
 
@@ -346,11 +337,14 @@ contract Staking is Ownable {
         }
 
         if (_action == 2) {
-            dep.WithdrawDate = block.timestamp + 60 days;
+            require(dep.unlocked == 1, "deposit withdrawn");
+            require(block.timestamp > dep.time + 60 days, "not yet");
+            dep.WithdrawDate = block.timestamp + 6 days;
             dep.WithdrawInitiated = 1;
             toClaim += returnAmount(_deposit, msg.sender);
-            emit WithdrawIsInitiated(msg.sender, block.timestamp + 60 days);
+            emit WithdrawIsInitiated(msg.sender, block.timestamp + 6 days);
         }
+
         dep.lastRewardTimeStamp = block.timestamp;
     }
 
@@ -392,23 +386,14 @@ contract Staking is Ownable {
     /**
      * @notice function to compound yield from deposits.
      */
-    function Compound(
-        uint256 _deposit
-    ) external onlyActionDay returns (uint256 compoundedAmount) {
+    function Compound(uint256 _deposit) internal {
         UserInfo storage user = userInfo[msg.sender];
         Depo storage dep = user.deposits[_deposit];
-        require(dep.CompoundInitiated == 1, "Compound not initialised");
-        require(
-            block.timestamp > dep.lastRewardTimeStamp + 6 days,
-            "already interacted last week"
-        );
 
         uint256 pending;
         uint256 compoundFee;
 
         if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
-            // user.lastRewardTimeStamp is last time user compounded/claimed
-
             uint256 period = 7 days; //because min and max are 7
 
             uint256 rewardperblock = (dep.amount * DROP_RATE) /
@@ -419,7 +404,7 @@ contract Staking is Ownable {
             dep.lastActionTime = block.timestamp;
 
             compoundFee = (pending * compoundFeeBP) / 10000;
-            compoundedAmount = pending - compoundFee;
+            uint256 compoundedAmount = pending - compoundFee;
             //all compounds create a new compound
             user.deposits.push(
                 Depo({
@@ -431,19 +416,14 @@ contract Staking is Ownable {
                     WithdrawDate: 0,
                     WithdrawInitiated: 0,
                     ClaimInitiated: 0,
-                    CompoundInitiated: 0,
                     lastRewardTimeStamp: 0
                 })
             );
             USDT.transfer(feeWallet, compoundFee);
             dep.lastRewardTimeStamp = block.timestamp;
             user.NoOfDeposits += 1;
-            dep.CompoundInitiated = 0;
-
             emit UserCompound(msg.sender, compoundedAmount);
-            return compoundedAmount;
         }
-        return 0;
     }
 
     /**
@@ -464,7 +444,6 @@ contract Staking is Ownable {
             // user.lastRewardTimeStamp is last time user compounded/claimed
 
             uint256 period = 7 days; // because min and max are 7
-
             uint256 rewardperblock = (dep.amount * DROP_RATE) /
                 seconds_per_day /
                 10000;
@@ -490,7 +469,6 @@ contract Staking is Ownable {
                         WithdrawDate: 0,
                         WithdrawInitiated: 0,
                         ClaimInitiated: 0,
-                        CompoundInitiated: 0,
                         lastRewardTimeStamp: 0
                     })
                 );
@@ -505,26 +483,28 @@ contract Staking is Ownable {
             USDT.transfer(user.WithdrawAddress, finalAmount - fee);
             dep.WithdrawInitiated = 0;
             dep.WithdrawDate = 0;
-
             emit UserWithdraw(msg.sender, finalAmount - fee);
             return (finalAmount, fee);
         }
+
         return (finalAmount, fee);
     }
 
+    /**
+     * @notice function to see if a deposit
+     */
     function checkReq(
         uint256 amount,
         uint256 time,
         uint256 unlocked,
         uint256 lastActiontime
     ) internal view returns (bool accepted) {
-        // any deposit with deposit.amount != 0 and deposit.time between 28 and  60 days or above 60 days and unlocked
+        // any deposit with deposit.amount != 0 and deposit.time between 29 and  60 days or above 60 days and unlocked
         accepted = (amount != 0 &&
-            ((block.timestamp > time + 28 days &&
+            ((block.timestamp > time + 29 days &&
                 block.timestamp < time + 60 days) ||
                 (block.timestamp > time + 60 days && unlocked != 0)) &&
-            // can only do once per 2 weeks
-            block.timestamp - lastActiontime > 7 days);
+            block.timestamp - lastActiontime > 6 days);
     }
 
     /**
@@ -635,10 +615,10 @@ contract Staking is Ownable {
         require(_decision == 1 || _decision == 2, "bad decision");
         dep.unlocked = _decision;
         if (_decision == 2) {
-            dep.WithdrawDate = block.timestamp + 60 days;
+            dep.WithdrawDate = block.timestamp + 6 days;
             dep.WithdrawInitiated = 1;
             toClaim += returnAmount(_depo, msg.sender);
-            emit WithdrawIsInitiated(msg.sender, block.timestamp + 60 days);
+            emit WithdrawIsInitiated(msg.sender, block.timestamp + 6 days);
         }
     }
 
@@ -674,33 +654,24 @@ contract Staking is Ownable {
     ) public view returns (uint256 finalAmount) {
         UserInfo storage user = userInfo[_user];
         Depo storage dep = user.deposits[_deposit];
-        if (dep.CompoundInitiated == 0) {
-            // must not be a compound
-            if (
-                checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)
-            ) {
-                uint256 period = 7 days;
-                uint256 rewardperblock = (dep.amount * DROP_RATE) /
-                    seconds_per_day /
-                    10000;
 
-                if (dep.ClaimInitiated == 1) {
-                    // if its a claim then don't include capital
-                    finalAmount += (period * rewardperblock);
-                } else {
-                    finalAmount += (period * rewardperblock) + dep.amount;
-                    if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
-                }
-            }
-
-            if (finalAmount >= withdrawLimit) {
-                // if reward over withdrawLimit then reward = withdrawLimit
-                finalAmount = withdrawLimit;
-            }
-
-            return (finalAmount);
+        if (dep.ClaimInitiated == 1) {
+            uint256 period = 7 days;
+            uint256 rewardperblock = (dep.amount * DROP_RATE) /
+                seconds_per_day /
+                10000;
+            // if its a claim then don't include capital
+            finalAmount = (period * rewardperblock);
+        } else {
+            finalAmount = dep.amount;
+            if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
         }
-        return 0;
+
+        if (finalAmount >= withdrawLimit) {
+            // if reward over withdrawLimit then reward = withdrawLimit
+            finalAmount = withdrawLimit;
+        }
+        return (finalAmount);
     }
 
     /**
@@ -731,6 +702,5 @@ contract Staking is Ownable {
     ) external view returns (Depo memory dep) {
         UserInfo storage user = userInfo[_addr];
         dep = user.deposits[_deposit];
-        //return (dep);
     }
 }
