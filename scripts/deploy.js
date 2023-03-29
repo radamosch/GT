@@ -24,7 +24,7 @@ async function main() {
 
   await staking.changeNFTcontract(token.address);
   await token2.safeMint(dev); //mint 1 NFT
-  await USDTtoken.approve(staking.address, toBN(10000, 18));
+  await USDTtoken.approve(staking.address, toBN(1000000, 18));
   await staking.initialize();
   await staking.deposit(toBN(2000, 18));
 }

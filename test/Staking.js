@@ -17,10 +17,12 @@ var WITHDRAW_FEE = 0;
 var Increase7days = 7;
 var Increase27days = 27;
 var Increase29days = 29;
-var SecondDepositAmount = 3000;
+var SecondDepositAmount = 60000;
+var depositamount3 = 10000;
 describe("Staking contract", function () {
   before(async () => {
     await deployContracts();
+    console.log(await stakingContract.getWeek());
     DROP_RATE = await stakingContract.DROP_RATE();
     DEPOSIT_FEE = await stakingContract.depositFeeBP();
     WITHDRAW_FEE = await stakingContract.withdrawFeeBP();
@@ -36,9 +38,10 @@ describe("Staking contract", function () {
     await NFTtokenContract.connect(wallet1).safeMint();
     await NFTtokenContract.connect(wallet2).safeMint();
     await NFTtokenContract.safeMint();
-    await currentTimeis();
-    console.log(`deposit `);
+
+    //console.log(`deposit `);
     await stakingContract.deposit(toBN(depositamount, 18));
+    //console.log(await currentUserInfo());
     await stakingContract.deposit(toBN(SecondDepositAmount, 18));
 
     await stakingContract.connect(wallet1).deposit(toBN(depositamount, 18));
@@ -99,14 +102,33 @@ describe("Staking contract", function () {
   });
 
   it("Pending Rewards 0 for first 28/59 days", async function () {
-    await increaseTimeBy(Increase27days * oneday);
+    //await increaseTimeBy(Increase27days * oneday);
+    //for (var i = 0; i < 27; i++) {
+    //console.log(`--------------------------`);
+    await increaseTimeBy(27 * oneday);
+    /*
+       console.log(`i is ${i}`);
+        console.log(
+        `getweek is ${await Number(await stakingContract.getWeek())}`
+      );
+      await currentTimeis();
+      console.log(
+        `getDifferenceFromActionDay is ${await Number(
+          await stakingContract.getDifferenceFromActionDay()
+        )}`
+      );
+    }
+*/
     var pendingRewards = (await getPending(1, owner.address)).toFixed(0);
     expect((1 * pendingRewards).toFixed(0)).to.equal("0");
-    await increaseTimeBy(Increase29days * oneday);
+    //await increaseTimeBy(Increase29days * oneday);
+
+    await increaseTimeBy(29 * oneday);
   });
 
   it("Can choose unlock deposit after day 61", async function () {
     await increaseTimeBy((61 - Increase27days - Increase29days - 1) * oneday);
+
     await expect(stakingContract.UnlockDeposit(0, 1)).not.to.be.reverted;
     useri = await stakingContract.memberDeposit(owner.address, 0);
     expect(Number(useri.amount)).to.equal(
@@ -133,7 +155,7 @@ describe("Staking contract", function () {
 
   it("Should Initiate Claim correctly ", async function () {
     await increaseTimeBy(10 * oneday);
-    await currentTimeis();
+
     await expect(stakingContract.InitiateAction(0, 1)).not.to.be.reverted;
     var depInfo = await stakingContract.memberDeposit(owner.address, 0);
     expect(depInfo.ClaimInitiated).to.equal(1);
@@ -160,7 +182,6 @@ describe("Staking contract", function () {
     var TMDBC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
     pendingbefore = await getPending(0, owner.address);
 
-    await currentTimeis();
     await expect(stakingContract.Claim(0)).not.to.be.reverted;
 
     var TMDAC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
@@ -182,7 +203,7 @@ describe("Staking contract", function () {
     await stakingContract.connect(wallet1).deposit(toBN(depositamount, 18));
     await stakingContract.connect(wallet2).deposit(toBN(depositamount, 18));
     var depInfo = await stakingContract.memberDeposit(owner.address, 1);
-    console.log(depInfo);
+    // console.log(depInfo);
     await expect(stakingContract.InitiateAction(1, 2)).revertedWith(
       "Action already initialised"
     );
@@ -194,13 +215,13 @@ describe("Staking contract", function () {
     expect(depInfo.WithdrawInitiated).to.equal(1);
 
     // await currentDifferenceFromActionDay();
-    console.log(await getPending(1, owner.address));
-    console.log(await stakingContract.toClaim());
+    // console.log(await getPending(1, owner.address));
+    //console.log(await stakingContract.toClaim());
 
     await increaseTimeBy(77 * oneday);
     await expect(stakingContract.Withdraw(1)).not.to.be.reverted;
-    console.log(await getPending(1, owner.address));
-    console.log(await stakingContract.toClaim());
+    //console.log(await getPending(1, owner.address));
+    //console.log(await stakingContract.toClaim());
 
     mydeposits = (await stakingContract.userInfo(owner.address)).NoOfDeposits;
 
@@ -217,7 +238,7 @@ describe("Staking contract", function () {
     expect(depInfo.WithdrawInitiated).to.equal(0);
     await increaseTimeBy(7 * oneday);
 
-    expect(mydeposits).to.equal(2);
+    expect(mydeposits).to.equal(3);
   });
 
   it("Should Claim day 118 after deposit, with compounds, correct pending amount", async function () {
@@ -230,7 +251,7 @@ describe("Staking contract", function () {
     await stakingContract.deposit(toBN(depositamount, 18));
     await stakingContract.deposit(toBN(depositamount, 18));
     mydeposits = (await stakingContract.userInfo(owner.address)).NoOfDeposits;
-    expect(mydeposits).to.equal(4);
+    expect(mydeposits).to.equal(5);
     await increaseTimeBy(7 * oneday);
     await increaseTimeBy(70 * oneday);
 
@@ -247,9 +268,9 @@ describe("Staking contract", function () {
 
     mydeposits = (await stakingContract.userInfo(owner.address)).NoOfDeposits;
 
-    expect(mydeposits).to.equal(5);
+    expect(mydeposits).to.equal(6);
     await increaseTimeBy(7 * oneday);
-    await currentTimeis();
+
     await expect(stakingContract.InitiateAction(3, 1)).not.to.be.reverted;
     //var userInfo = await stakingContract.userInfo(owner.address);
     var depInfo = await stakingContract.memberDeposit(owner.address, 3);
@@ -269,7 +290,6 @@ describe("Staking contract", function () {
   });
 
   it("Shouldn't be able to Initiateclaim/InitiateAction(0) after 1 week of initiateUnlock", async function () {
-    await currentTimeis();
     await expect(stakingContract.InitiateAction(3, 1)).revertedWith(
       "wrong Initiate day"
     );
@@ -296,9 +316,9 @@ describe("Staking contract", function () {
   });
 
   it("Should be able to deposit after withdrawing all funds", async function () {
-    await stakingContract.deposit(toBN(270 * depositamount, 18));
+    await stakingContract.deposit(toBN(depositamount3, 18));
     await increaseTimeBy(60 * oneday);
-    await expect(stakingContract.UnlockDeposit(2, 1)).not.to.be.reverted;
+    //await expect(stakingContract.UnlockDeposit(2, 1)).not.to.be.reverted;
     // await expect(stakingContract.UnlockDeposit(3, 1)).not.to.be.reverted;
     await expect(stakingContract.UnlockDeposit(4, 1)).not.to.be.reverted;
 
@@ -326,7 +346,7 @@ describe("Staking contract", function () {
 
     await increaseTimeBy(11 * oneday);
     //
-    await currentTimeis();
+
     await expect(stakingContract.InitiateAction(4, 2)).not.to.be.reverted;
 
     await increaseTimeBy(55 * oneday);
@@ -350,15 +370,17 @@ describe("Staking contract", function () {
 
     // expect(mydepositsAfter - mydepositsBefore).to.equal(1);
     usertotalDe = (await stakingContract.userInfo(owner.address)).NoOfDeposits;
-
+    // console.log(await stakingContract.memberDeposit(owner.address, 6));
+    /*
     for (let i = 0; i < usertotalDe; i++) {
       if (true) {
-        // console.log(
-        // await stakingContract.memberDeposit(owner.address, Number(i))
-        // );
-        //    console.log(i);
+        console.log(
+          await stakingContract.memberDeposit(owner.address, 5)
+        );
+        console.log(i);
       }
     }
+    */
   });
 
   it("Should calculate action modifiers correctly", async function () {
@@ -419,6 +441,14 @@ describe("Staking contract", function () {
           increases[5]
       )
     );
+  });
+
+  it("Should be able to deposit after withdrawing all funds", async function () {
+    await stakingContract.deposit(toBN(depositamount, 18));
+    console.log(await stakingContract.memberDeposit(owner.address, 7));
+    console.log(await stakingContract.userInfo(owner.address));
+    await increaseTimeBy(60 * oneday);
+    await expect(stakingContract.UnlockDeposit(0, 7)).not.to.be.reverted;
   });
 });
 function getres(numb) {

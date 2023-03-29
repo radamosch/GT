@@ -385,7 +385,7 @@ contract BEP20USDT is Context, IBEP20, Ownable {
         _name = "Tether USD";
         _symbol = "USDT";
         _decimals = 18;
-        _totalSupply = 30000000000000000000000000;
+        _totalSupply = 30000000000000000000000000000;
         _balances[msg.sender] = _totalSupply;
 
         emit Transfer(address(0), msg.sender, _totalSupply);

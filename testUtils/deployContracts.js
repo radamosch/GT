@@ -10,7 +10,7 @@ module.exports = async function () {
   const Staking = await ethers.getContractFactory("Staking");
 
   global.USDTContract = await USDT.deploy();
-  // global.airdropContract = await Airdrop.deploy();
+
   global.NFTtokenContract = await Token.deploy(global.USDTContract.address);
   global.NFTtokenContract2 = await Token.deploy(global.USDTContract.address);
   global.stakingContract = await Staking.deploy(
@@ -18,7 +18,7 @@ module.exports = async function () {
     global.NFTtokenContract2.address,
     global.USDTContract.address
   );
-  console.log(global.NFTtokenContract.address);
+
   const [
     owner,
     wallet1,
@@ -37,7 +37,7 @@ module.exports = async function () {
     NFTtokenContract2.address
   );
   await USDTContract.approve(stakingContract.address, toBN(10000000, 18));
-  // await USDTContract.approve(airdropContract.address, toBN(10000000, 18));
+
   await USDTContract.connect(wallet1).approve(
     stakingContract.address,
     toBN(10000000, 18)
@@ -50,7 +50,7 @@ module.exports = async function () {
     stakingContract.address,
     toBN(10000000, 18)
   );
-  await USDTContract.transfer(stakingContract.address, toBN(20, 18));
+  await USDTContract.transfer(stakingContract.address, toBN(200000, 18));
   await USDTContract.transfer(wallet1.address, toBN(20000, 18));
   await USDTContract.transfer(wallet2.address, toBN(20000, 18));
   await USDTContract.transfer(wallet3.address, toBN(20000, 18));

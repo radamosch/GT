@@ -153,7 +153,6 @@ contract Staking is Ownable {
         address WithdrawAddress; //by default msg.sender, can change with changeWithdrawalAddress()
         uint256 NoOfDeposits; // No. of deposits
         uint256 initialDeposit; // Initial deposit, separate cause locked forever
-        uint256 NFTId; // the tokenID
     }
 
     address[] public UsersInfo;
@@ -200,11 +199,7 @@ contract Staking is Ownable {
     }
 
     modifier onlyInitiateActionDay() {
-        require(
-            getDifferenceFromActionDay() == 0 ||
-                getDifferenceFromActionDay() == 13,
-            "wrong Initiate day"
-        );
+        require(getDifferenceFromActionDay() == 0, "wrong Initiate day");
         _;
     }
 
