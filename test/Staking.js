@@ -446,9 +446,27 @@ describe("Staking contract", function () {
   it("Should be able to deposit after withdrawing all funds", async function () {
     await stakingContract.deposit(toBN(depositamount, 18));
     console.log(await stakingContract.memberDeposit(owner.address, 7));
+
     console.log(await stakingContract.userInfo(owner.address));
     await increaseTimeBy(60 * oneday);
-    await expect(stakingContract.UnlockDeposit(0, 7)).not.to.be.reverted;
+    await expect(stakingContract.UnlockDeposit(7, 2)).not.to.be.reverted;
+
+    console.log(await stakingContract.memberDeposit(owner.address, 7));
+    await expect(stakingContract.ChangefeeAddress(wallet1.address)).not.to.be
+      .reverted;
+    await increaseTimeBy(8 * oneday);
+    var TMDBC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
+    pendingbefore = await getPending(7, owner.address);
+    await expect(stakingContract.Withdraw(7)).not.to.be.reverted;
+    var TMDAC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
+
+    var pendingafter = await getPending(7, owner.address);
+    console.log(TMDAC, TMDBC, pendingbefore, pendingafter);
+    expect((1 * pendingbefore).toFixed(0)).to.equal(
+      ((TMDAC - TMDBC) * 0.95).toFixed(0)
+    );
+
+    expect(pendingafter).to.equal(0);
   });
 });
 function getres(numb) {

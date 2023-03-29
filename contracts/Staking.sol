@@ -632,7 +632,7 @@ contract Staking is Ownable {
         UserInfo storage user = userInfo[msg.sender];
         Depo storage dep = user.deposits[_depo];
         require(dep.unlocked == 0, "already decided");
-        require(block.timestamp > dep.time + 60 days, "only after 60 days");
+        require(block.timestamp > dep.time + 60 days, "only after 60d");
         require(_decision == 1 || _decision == 2, "bad decision");
         dep.unlocked = _decision;
         if (_decision == 2) {
@@ -660,12 +660,15 @@ contract Staking is Ownable {
                 seconds_per_day /
                 10000;
             // if its a claim then don't include capital
-            finalAmount = (period * rewardperblock);
+            finalAmount = ((period * rewardperblock) * withdrawFeeBP) / 10000;
+
             if (finalAmount > claimLimit) finalAmount = claimLimit;
+            finalAmount = (finalAmount * withdrawFeeBP) / 10000;
         } else if (dep.WithdrawInitiated == 1) {
             finalAmount = dep.amount;
             if (finalAmount > withdrawLimit) finalAmount = withdrawLimit;
             if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
+            finalAmount = (finalAmount * withdrawFeeBP) / 10000;
         }
 
         if (finalAmount >= withdrawLimit) {
