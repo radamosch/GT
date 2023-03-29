@@ -314,7 +314,7 @@ contract Staking is Ownable {
         UserInfo storage user = userInfo[msg.sender];
         Depo storage dep = user.deposits[_deposit];
         require(dep.amount != 0, "deposit null");
-        require(block.timestamp > dep.time + 29 days, "warmup period");
+        require(block.timestamp > dep.time + 28 days, "warmup period");
         require(
             dep.WithdrawInitiated == 0 &&
                 dep.ClaimInitiated == 0 &&
@@ -333,7 +333,7 @@ contract Staking is Ownable {
 
         if (_action == 1) {
             dep.ClaimInitiated = 1;
-            toClaim += returnAmount(_deposit, msg.sender);
+            toClaim += pendingReward(_deposit, msg.sender);
             emit ClaimIsInitiated(msg.sender, block.timestamp);
         }
 
@@ -342,7 +342,7 @@ contract Staking is Ownable {
             require(block.timestamp > dep.time + 60 days, "not yet");
             dep.WithdrawDate = block.timestamp + 6 days;
             dep.WithdrawInitiated = 1;
-            toClaim += returnAmount(_deposit, msg.sender);
+            toClaim += pendingReward(_deposit, msg.sender);
             emit WithdrawIsInitiated(msg.sender, block.timestamp + 6 days);
         }
 
@@ -466,13 +466,8 @@ contract Staking is Ownable {
         if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
             // user.lastRewardTimeStamp is last time user compounded/claimed
 
-            uint256 period = 7 days; // because min and max are 7
-            uint256 rewardperblock = (dep.amount * DROP_RATE) /
-                seconds_per_day /
-                10000;
-
             dep.lastActionTime = block.timestamp;
-            finalAmount += (period * rewardperblock) + dep.amount;
+            finalAmount += dep.amount;
             //initial deposit is non-withdrawable
             if (_deposit == 0) {
                 finalAmount -= dep.amount;
@@ -524,7 +519,7 @@ contract Staking is Ownable {
     ) internal view returns (bool accepted) {
         // any deposit with deposit.amount != 0 and deposit.time between 29 and  60 days or above 60 days and unlocked
         accepted = (amount != 0 &&
-            ((block.timestamp > time + 29 days &&
+            ((block.timestamp > time + 28 days &&
                 block.timestamp < time + 60 days) ||
                 (block.timestamp > time + 60 days && unlocked != 0)) &&
             block.timestamp - lastActiontime > 6 days);
@@ -648,38 +643,16 @@ contract Staking is Ownable {
         if (_decision == 2) {
             dep.WithdrawDate = block.timestamp + 6 days;
             dep.WithdrawInitiated = 1;
-            toClaim += returnAmount(_depo, msg.sender);
+            toClaim += pendingReward(_depo, msg.sender);
             emit WithdrawIsInitiated(msg.sender, block.timestamp + 6 days);
         }
     }
 
     /**
      * @notice View function to see pending reward for specific deposit on frontend.
-     * @return USDTReward Pending reward for a given user/deposit
+     * @return finalAmount Pending reward for a given user/deposit
      */
     function pendingReward(
-        uint256 _deposit
-    ) external view returns (uint256 USDTReward) {
-        UserInfo storage user = userInfo[msg.sender];
-        Depo storage dep = user.deposits[_deposit];
-        if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
-            // user.lastRewardTimeStamp is last time user compounded/claimed
-
-            uint256 period = 7 days; // because min and max are 7
-
-            uint256 rewardperblock = (dep.amount * DROP_RATE) /
-                seconds_per_day /
-                10000;
-
-            USDTReward += (period * rewardperblock);
-        }
-    }
-
-    /**
-     * @notice View function to see return amount for claim or withdraw.
-     * @return finalAmount without fees
-     */
-    function returnAmount(
         uint256 _deposit,
         address _user
     ) public view returns (uint256 finalAmount) {
@@ -693,8 +666,10 @@ contract Staking is Ownable {
                 10000;
             // if its a claim then don't include capital
             finalAmount = (period * rewardperblock);
-        } else {
+            if (finalAmount > claimLimit) finalAmount = claimLimit;
+        } else if (dep.WithdrawInitiated == 1) {
             finalAmount = dep.amount;
+            if (finalAmount > withdrawLimit) finalAmount = withdrawLimit;
             if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
         }
 
