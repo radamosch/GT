@@ -121,7 +121,8 @@ contract Staking is Ownable {
     uint256 public depositFeeBP = 1000; //10%
     uint256 public compoundFeeBP = 500; //5%
     uint256 public withdrawFeeBP = 500; //5%
-    uint256 public withdrawLimit = 10000 * 10 ** 18;
+    uint256 public claimLimit = 10000 * 10 ** 18;
+    uint256 public withdrawLimit = 50000 * 10 ** 18;
     uint256 public startBlock; // The block number when USDT rewards starts.
     uint256 public DROP_RATE = 60; //0.6 % per day
     uint256 public immutable seconds_per_day = 86400;
@@ -371,14 +372,35 @@ contract Staking is Ownable {
             dep.lastActionTime = block.timestamp;
 
             uint256 withdrawFee = (claimed * withdrawFeeBP) / 10000;
-            toClaim -= claimed;
+            uint256 finalToClaim = claimed - withdrawFee;
+
+            // max claim is initially 10k USDT, if excess then create new Compounded Deposit
+            if (finalToClaim > claimLimit) {
+                user.deposits.push(
+                    Depo({
+                        amount: finalToClaim - claimLimit,
+                        time: block.timestamp,
+                        lastActionTime: block.timestamp,
+                        unlocked: 0,
+                        isCompound: 1,
+                        WithdrawDate: 0,
+                        WithdrawInitiated: 0,
+                        ClaimInitiated: 0,
+                        lastRewardTimeStamp: 0
+                    })
+                );
+                user.NoOfDeposits += 1;
+                finalToClaim = claimLimit;
+            }
+
+            toClaim -= finalToClaim;
             USDT.transfer(feeWallet, withdrawFee);
-            USDT.transfer(user.WithdrawAddress, claimed - withdrawFee);
+            USDT.transfer(user.WithdrawAddress, finalToClaim);
             dep.lastRewardTimeStamp = block.timestamp;
             dep.ClaimInitiated = 0;
 
-            emit UserClaim(msg.sender, claimed - withdrawFee);
-            return claimed - withdrawFee;
+            emit UserClaim(msg.sender, finalToClaim);
+            return finalToClaim;
         }
         return 0;
     }
@@ -405,6 +427,7 @@ contract Staking is Ownable {
 
             compoundFee = (pending * compoundFeeBP) / 10000;
             uint256 compoundedAmount = pending - compoundFee;
+
             //all compounds create a new compound
             user.deposits.push(
                 Depo({
@@ -464,10 +487,10 @@ contract Staking is Ownable {
                         amount: finalAmount - withdrawLimit,
                         time: block.timestamp,
                         lastActionTime: block.timestamp,
-                        unlocked: 0,
+                        unlocked: 2,
                         isCompound: 1,
-                        WithdrawDate: 0,
-                        WithdrawInitiated: 0,
+                        WithdrawDate: block.timestamp + 30 days,
+                        WithdrawInitiated: 1,
                         ClaimInitiated: 0,
                         lastRewardTimeStamp: 0
                     })
@@ -509,10 +532,18 @@ contract Staking is Ownable {
 
     /**
      * @notice function to change withdraw limit
-     * @param _withdrawLimit: 10000*10**18 is 10k USDT
+     * @param _withdrawLimit: 50000*10**18 is 50k USDT
      */
     function changeWithdraw_Limit(uint256 _withdrawLimit) external onlyOwner {
         withdrawLimit = _withdrawLimit;
+    }
+
+    /**
+     * @notice function to change claim limit
+     * @param _claimLimit: 10000*10**18 is 10k USDT
+     */
+    function changeclaim_Limit(uint256 _claimLimit) external onlyOwner {
+        claimLimit = _claimLimit;
     }
 
     /**
