@@ -125,7 +125,7 @@ contract Staking is Ownable {
     uint256 public withdrawLimit = 50000 * 10 ** 18;
     uint256 public startBlock; // The block number when USDT rewards starts.
     uint256 public DROP_RATE = 60; //0.6 % per day
-    uint256 public immutable seconds_per_day = 86400;
+    // uint256 public immutable 86400 = 86400;
     uint256 public immutable Friday = 1678406460; // this is the Friday of initiateAction
     address public NFTaddress; // this is the OG NFT contract address
     address public NFTaddress2; // this is the Whitelist NFT contract address
@@ -236,7 +236,7 @@ contract Staking is Ownable {
         uint256 _amount,
         uint256 date
     ) external payable onlyOwner {
-        //  require(startBlock == 0, "Has started ");
+        require(startBlock == 0, "Has started ");
         UserInfo storage user = userInfo[_user];
 
         user.deposits.push(
@@ -359,9 +359,7 @@ contract Staking is Ownable {
 
         if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
             uint256 period = 7 days;
-            uint256 rewardperblock = (dep.amount * DROP_RATE) /
-                seconds_per_day /
-                10000;
+            uint256 rewardperblock = (dep.amount * DROP_RATE) / 86400 / 10000;
             claimed += (period * rewardperblock);
             dep.lastActionTime = block.timestamp;
 
@@ -412,9 +410,7 @@ contract Staking is Ownable {
         if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
             uint256 period = 7 days; //because min and max are 7
 
-            uint256 rewardperblock = (dep.amount * DROP_RATE) /
-                seconds_per_day /
-                10000;
+            uint256 rewardperblock = (dep.amount * DROP_RATE) / 86400 / 10000;
 
             pending += (period * rewardperblock);
             dep.lastActionTime = block.timestamp;
@@ -610,7 +606,7 @@ contract Staking is Ownable {
      * @return totalweeks : no. of week since start
      */
     function getWeek() public view returns (uint256 totalweeks) {
-        return (block.timestamp - Friday) / seconds_per_day / 14;
+        return (block.timestamp - Friday) / 86400 / 14;
     }
 
     /**
@@ -619,7 +615,7 @@ contract Staking is Ownable {
      */
     function getDifferenceFromActionDay() public view returns (uint256) {
         uint256 totalsec = (block.timestamp - Friday); //total sec from friday
-        return totalsec / seconds_per_day - getWeek() * 14; //7 days in a week
+        return totalsec / 86400 - getWeek() * 14; //7 days in a week
     }
 
     /**
@@ -655,9 +651,7 @@ contract Staking is Ownable {
 
         if (dep.ClaimInitiated == 1) {
             uint256 period = 7 days;
-            uint256 rewardperblock = (dep.amount * DROP_RATE) /
-                seconds_per_day /
-                10000;
+            uint256 rewardperblock = (dep.amount * DROP_RATE) / 86400 / 10000;
             finalAmount = (period * rewardperblock);
             if (finalAmount > claimLimit) finalAmount = claimLimit;
         } else if (dep.WithdrawInitiated == 1) {
