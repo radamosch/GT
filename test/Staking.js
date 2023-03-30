@@ -155,7 +155,7 @@ describe("Staking contract", function () {
 
   it("Should Initiate Claim correctly ", async function () {
     await increaseTimeBy(23 * oneday);
-    console.log(await stakingContract.getDifferenceFromActionDay());
+
     await expect(stakingContract.InitiateAction(0, 1)).not.to.be.reverted;
     var depInfo = await stakingContract.memberDeposit(owner.address, 0);
     expect(depInfo.ClaimInitiated).to.equal(1);
@@ -451,13 +451,13 @@ describe("Staking contract", function () {
 
   it("Should be able to deposit after withdrawing all funds", async function () {
     await stakingContract.deposit(toBN(depositamount, 18));
-    console.log(await stakingContract.memberDeposit(owner.address, 7));
+    // console.log(await stakingContract.memberDeposit(owner.address, 7));
 
-    console.log(await stakingContract.userInfo(owner.address));
+    //console.log(await stakingContract.userInfo(owner.address));
     await increaseTimeBy(60 * oneday);
     await expect(stakingContract.UnlockDeposit(7, 2)).not.to.be.reverted;
 
-    console.log(await stakingContract.memberDeposit(owner.address, 7));
+    //console.log(await stakingContract.memberDeposit(owner.address, 7));
     await expect(stakingContract.ChangefeeAddress(wallet1.address)).not.to.be
       .reverted;
     await increaseTimeBy(8 * oneday);
@@ -467,12 +467,83 @@ describe("Staking contract", function () {
     var TMDAC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
 
     var pendingafter = await getPending(7, owner.address);
-    console.log(TMDAC, TMDBC, pendingbefore, pendingafter);
+    // console.log(TMDAC, TMDBC, pendingbefore, pendingafter);
     expect((1 * pendingbefore * 0.95).toFixed(0)).to.equal(
       ((TMDAC - TMDBC) * 0.95).toFixed(0)
     );
 
     expect(pendingafter).to.equal(0);
+    // console.log(await stakingContract.getAllrewards());
+
+    await stakingContract.deposit(toBN(depositamount, 18));
+    var mydeposits = (await stakingContract.userInfo(owner.address))
+      .NoOfDeposits;
+    //console.log(mydeposits);
+    await increaseTimeBy(63 * oneday);
+    await expect(stakingContract.UnlockDeposit(8, 1)).not.to.be.reverted;
+
+    await expect(stakingContract.InitiateAction(8, 1)).not.to.be.reverted;
+    var depInfo = await stakingContract.memberDeposit(owner.address, 8);
+    //console.log(depInfo);
+    await increaseTimeBy(8 * oneday);
+    //console.log((await stakingContract.getAllrewards()) / 10 ** 18);
+    //for (let i = 0; i < 9; i++) {
+    //      // var depInfo = await stakingContract.memberDeposit(owner.address, i);
+    //     console.log(i, depInfo);
+    //  }
+
+    await increaseTimeBy(6 * oneday);
+
+    await expect(stakingContract.InitiateAction(0, 0)).not.to.be.reverted;
+
+    //await expect(stakingContract.Claim(1)).not.to.be.reverted;
+
+    await expect(stakingContract.InitiateAction(3, 0)).not.to.be.reverted;
+    await expect(stakingContract.InitiateAction(5, 0)).not.to.be.reverted;
+    await expect(stakingContract.InitiateAction(6, 0)).not.to.be.reverted;
+    await increaseTimeBy(7 * oneday);
+    await expect(stakingContract.Withdraw(2)).not.to.be.reverted;
+    await expect(stakingContract.Claim(8)).not.to.be.reverted;
+    var mydeposits = (await stakingContract.userInfo(owner.address))
+      .NoOfDeposits;
+    console.log(` my deps before are ${mydeposits}`);
+    await stakingContract.deposit(toBN(200 * depositamount, 18));
+    var mydeposits = (await stakingContract.userInfo(owner.address))
+      .NoOfDeposits;
+    console.log(` my deps after are ${mydeposits}`);
+    await increaseTimeBy(60 * oneday);
+
+    await expect(stakingContract.UnlockDeposit(10, 2)).not.to.be.reverted;
+    var mydeposits = (await stakingContract.userInfo(owner.address))
+      .NoOfDeposits;
+    console.log(` my deps after unlock are ${mydeposits}`);
+    await increaseTimeBy(10 * oneday);
+    var depInfo = await stakingContract.memberDeposit(owner.address, 9);
+
+    console.log(depInfo);
+
+    console.log((await stakingContract.getAllrewards()) / 10 ** 18);
+    // console.log(await stakingContract.getDifferenceFromActionDay());
+    console.log(`---------------------------`);
+    console.log((await USDTContract.balanceOf(owner.address)) / 10 ** 18);
+    await expect(stakingContract.Withdraw(10)).not.to.be.reverted;
+    //await expect(stakingContract.Withdraw(11)).not.to.be.reverted;
+    var mydeposits = (await stakingContract.userInfo(owner.address))
+      .NoOfDeposits;
+    console.log(` my deps after withdraw are ${mydeposits}`);
+
+    console.log((await USDTContract.balanceOf(owner.address)) / 10 ** 18);
+    var depInfo = await stakingContract.memberDeposit(owner.address, 9);
+    console.log(9, depInfo);
+
+    var depInfo = await stakingContract.memberDeposit(owner.address, 10);
+    console.log(10, depInfo);
+    var depInfo = await stakingContract.memberDeposit(owner.address, 11);
+    console.log(11, depInfo);
+
+    console.log((await stakingContract.getAllrewards()) / 10 ** 18);
+
+    console.log(12, depInfo);
   });
 });
 function getres(numb) {

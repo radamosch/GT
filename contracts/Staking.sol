@@ -129,7 +129,7 @@ contract Staking is Ownable {
     uint256 public immutable Friday = 1678406460; // this is the Friday of initiateAction
     address public NFTaddress; // this is the OG NFT contract address
     address public NFTaddress2; // this is the Whitelist NFT contract address
-    uint256 public toClaim; // this is the amount that has to be paid out on Friday
+    //  uint256 public toClaim; // this is the amount that has to be paid out on Friday
 
     IBEP20 public USDT;
     myNFT NFTContract;
@@ -140,7 +140,7 @@ contract Staking is Ownable {
         uint256 amount; //deposit amount
         uint256 time; //deposit time
         uint256 lastActionTime; // last time this deposit was claimed/compounded/withdrawn
-        uint256 unlocked; // after 60 days users decides to re-lock or not a deposit, 0 means locked, 1 relocked, 2 to withdraw
+        uint256 unlocked; // after 60 days users decides to re-lock or not a deposit, 0 means locked, 1 relocked, 2 to withdraw, 3 overLimit withdraw
         uint256 isCompound; // 0 if deposit, 1 if compounded amount
         uint256 WithdrawDate; // The day user is able to withdraw funds
         uint256 WithdrawInitiated; // indicates withdraw initiated
@@ -328,7 +328,6 @@ contract Staking is Ownable {
 
         if (_action == 1) {
             dep.ClaimInitiated = 1;
-            toClaim += pendingReward(_deposit, msg.sender);
             emit ClaimIsInitiated(msg.sender, block.timestamp);
         }
 
@@ -337,7 +336,7 @@ contract Staking is Ownable {
             require(block.timestamp > dep.time + 60 days, "not yet");
             dep.WithdrawDate = block.timestamp + 6 days;
             dep.WithdrawInitiated = 1;
-            toClaim += pendingReward(_deposit, msg.sender);
+
             emit WithdrawIsInitiated(msg.sender, block.timestamp + 6 days);
         }
 
@@ -388,7 +387,7 @@ contract Staking is Ownable {
                 finalToClaim = claimLimit;
             }
 
-            toClaim -= finalToClaim;
+            //     toClaim -= finalToClaim;
             USDT.transfer(feeWallet, claimFee);
             USDT.transfer(user.WithdrawAddress, finalToClaim);
             dep.lastRewardTimeStamp = block.timestamp;
@@ -470,14 +469,14 @@ contract Staking is Ownable {
                 dep.amount = 0;
             }
 
-            // max withdraw is initially 50k USDT, if excess then create new Compounded Deposit
-            if (finalAmount > withdrawLimit) {
+            // max withdraw is initially 50k USDT, if excess (and not previous withdraw [dep.unlocked]<3) then create new Compounded Deposit
+            if (finalAmount > withdrawLimit && dep.unlocked < 3) {
                 user.deposits.push(
                     Depo({
                         amount: finalAmount - withdrawLimit,
                         time: block.timestamp,
                         lastActionTime: block.timestamp,
-                        unlocked: 2,
+                        unlocked: 3,
                         isCompound: 1,
                         WithdrawDate: block.timestamp + 30 days,
                         WithdrawInitiated: 1,
@@ -491,7 +490,7 @@ contract Staking is Ownable {
             }
 
             fee = (finalAmount * withdrawFeeBP) / 10000;
-            toClaim -= (finalAmount - fee);
+            //   toClaim -= (finalAmount - fee);
             USDT.transfer(feeWallet, fee);
             USDT.transfer(user.WithdrawAddress, finalAmount - fee);
             dep.WithdrawInitiated = 0;
@@ -638,7 +637,7 @@ contract Staking is Ownable {
         if (_decision == 2) {
             dep.WithdrawDate = block.timestamp + 6 days;
             dep.WithdrawInitiated = 1;
-            toClaim += pendingReward(_depo, msg.sender);
+
             emit WithdrawIsInitiated(msg.sender, block.timestamp + 6 days);
         }
     }
@@ -659,26 +658,17 @@ contract Staking is Ownable {
             uint256 rewardperblock = (dep.amount * DROP_RATE) /
                 seconds_per_day /
                 10000;
-            // if its a claim then don't include capital
             finalAmount = (period * rewardperblock);
-
             if (finalAmount > claimLimit) finalAmount = claimLimit;
-            finalAmount -= (finalAmount * withdrawFeeBP) / 10000;
         } else if (dep.WithdrawInitiated == 1) {
             finalAmount = dep.amount;
 
             if (finalAmount > withdrawLimit) finalAmount = withdrawLimit;
 
             if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
-
-            finalAmount -= (finalAmount * withdrawFeeBP) / 10000;
         }
 
-        if (finalAmount >= withdrawLimit) {
-            // if reward over withdrawLimit then reward = withdrawLimit
-            finalAmount = withdrawLimit;
-        }
-        return (finalAmount);
+        finalAmount -= (finalAmount * withdrawFeeBP) / 10000;
     }
 
     /**
@@ -709,5 +699,24 @@ contract Staking is Ownable {
     ) external view returns (Depo memory dep) {
         UserInfo storage user = userInfo[_addr];
         dep = user.deposits[_deposit];
+    }
+
+    function getAllrewards() external view returns (uint256 totalUSDT) {
+        uint256 lengtharray = UsersInfo.length;
+        for (uint256 i; i < lengtharray; ) {
+            address currentUser = UsersInfo[i];
+            UserInfo storage user = userInfo[currentUser];
+            uint256 userDepositNo = user.NoOfDeposits;
+            for (uint256 j; j < userDepositNo; ) {
+                totalUSDT += pendingReward(j, currentUser);
+
+                unchecked {
+                    ++j;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
     }
 }
