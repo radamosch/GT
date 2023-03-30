@@ -366,8 +366,8 @@ contract Staking is Ownable {
             claimed += (period * rewardperblock);
             dep.lastActionTime = block.timestamp;
 
-            uint256 withdrawFee = (claimed * withdrawFeeBP) / 10000;
-            uint256 finalToClaim = claimed - withdrawFee;
+            uint256 claimFee = (claimed * withdrawFeeBP) / 10000;
+            uint256 finalToClaim = claimed - claimFee;
 
             // max claim is initially 10k USDT, if excess then create new Compounded Deposit
             if (finalToClaim > claimLimit) {
@@ -389,7 +389,7 @@ contract Staking is Ownable {
             }
 
             toClaim -= finalToClaim;
-            USDT.transfer(feeWallet, withdrawFee);
+            USDT.transfer(feeWallet, claimFee);
             USDT.transfer(user.WithdrawAddress, finalToClaim);
             dep.lastRewardTimeStamp = block.timestamp;
             dep.ClaimInitiated = 0;
@@ -470,7 +470,7 @@ contract Staking is Ownable {
                 dep.amount = 0;
             }
 
-            // max withdraw is initially 10k USDT, if excess then create new Compounded Deposit
+            // max withdraw is initially 50k USDT, if excess then create new Compounded Deposit
             if (finalAmount > withdrawLimit) {
                 user.deposits.push(
                     Depo({
@@ -491,7 +491,7 @@ contract Staking is Ownable {
             }
 
             fee = (finalAmount * withdrawFeeBP) / 10000;
-            toClaim -= finalAmount;
+            toClaim -= (finalAmount - fee);
             USDT.transfer(feeWallet, fee);
             USDT.transfer(user.WithdrawAddress, finalAmount - fee);
             dep.WithdrawInitiated = 0;
@@ -660,15 +660,18 @@ contract Staking is Ownable {
                 seconds_per_day /
                 10000;
             // if its a claim then don't include capital
-            finalAmount = ((period * rewardperblock) * withdrawFeeBP) / 10000;
+            finalAmount = (period * rewardperblock);
 
             if (finalAmount > claimLimit) finalAmount = claimLimit;
-            finalAmount = (finalAmount * withdrawFeeBP) / 10000;
+            finalAmount -= (finalAmount * withdrawFeeBP) / 10000;
         } else if (dep.WithdrawInitiated == 1) {
             finalAmount = dep.amount;
+
             if (finalAmount > withdrawLimit) finalAmount = withdrawLimit;
+
             if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
-            finalAmount = (finalAmount * withdrawFeeBP) / 10000;
+
+            finalAmount -= (finalAmount * withdrawFeeBP) / 10000;
         }
 
         if (finalAmount >= withdrawLimit) {

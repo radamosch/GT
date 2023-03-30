@@ -154,16 +154,18 @@ describe("Staking contract", function () {
   });
 
   it("Should Initiate Claim correctly ", async function () {
-    await increaseTimeBy(10 * oneday);
-
+    await increaseTimeBy(23 * oneday);
+    console.log(await stakingContract.getDifferenceFromActionDay());
     await expect(stakingContract.InitiateAction(0, 1)).not.to.be.reverted;
     var depInfo = await stakingContract.memberDeposit(owner.address, 0);
     expect(depInfo.ClaimInitiated).to.equal(1);
     expect(depInfo.WithdrawInitiated).to.equal(0);
+
     var pendingRewards = (await getPending(0, owner.address)).toFixed(0);
     expect((1 * pendingRewards).toFixed(0)).to.equal(
       (
         depositamount *
+        0.95 *
         ((DROP_RATE * 7) / 10000) *
         (1 - DEPOSIT_FEE / 10000)
       ).toFixed(0)
@@ -187,7 +189,9 @@ describe("Staking contract", function () {
     var TMDAC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
 
     var pendingafter = await getPending(0, owner.address);
-    expect((1 * pendingbefore).toFixed(0)).to.equal((TMDAC - TMDBC).toFixed(0));
+    expect((1 * pendingbefore).toFixed(0)).to.equal(
+      (0.95 * (TMDAC - TMDBC)).toFixed(0)
+    );
 
     expect(pendingafter).to.equal(0);
   });
@@ -285,7 +289,9 @@ describe("Staking contract", function () {
     var TMDAC = (await USDTContract.balanceOf(owner.address)) / 10 ** 18;
 
     var pendingafter = await getPending(3, owner.address);
-    expect((1 * pendingbefore).toFixed(0)).to.equal((TMDAC - TMDBC).toFixed(0));
+    expect(((1 * pendingbefore) / 0.95).toFixed(0)).to.equal(
+      (TMDAC - TMDBC).toFixed(0)
+    );
     expect(pendingafter).to.equal(0);
   });
 
@@ -462,7 +468,7 @@ describe("Staking contract", function () {
 
     var pendingafter = await getPending(7, owner.address);
     console.log(TMDAC, TMDBC, pendingbefore, pendingafter);
-    expect((1 * pendingbefore).toFixed(0)).to.equal(
+    expect((1 * pendingbefore * 0.95).toFixed(0)).to.equal(
       ((TMDAC - TMDBC) * 0.95).toFixed(0)
     );
 
