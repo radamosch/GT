@@ -336,7 +336,6 @@ contract Staking is Ownable {
             require(block.timestamp > dep.time + 60 days, "not yet");
             dep.WithdrawDate = block.timestamp + 6 days;
             dep.WithdrawInitiated = 1;
-
             emit WithdrawIsInitiated(msg.sender, block.timestamp + 6 days);
         }
 
@@ -385,7 +384,6 @@ contract Staking is Ownable {
                 finalToClaim = claimLimit;
             }
 
-            //     toClaim -= finalToClaim;
             USDT.transfer(feeWallet, claimFee);
             USDT.transfer(user.WithdrawAddress, finalToClaim);
             dep.lastRewardTimeStamp = block.timestamp;
@@ -454,11 +452,8 @@ contract Staking is Ownable {
         );
 
         if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
-            // user.lastRewardTimeStamp is last time user compounded/claimed
-
             dep.lastActionTime = block.timestamp;
             finalAmount += dep.amount;
-            //initial deposit is non-withdrawable
             if (_deposit == 0) {
                 finalAmount -= dep.amount;
             } else {

@@ -42,7 +42,7 @@ describe("Staking contract", function () {
     console.log(await currentTimeis());
     //console.log(`deposit `);
     await stakingContract.deposit(toBN(1 * depositamount, 18));
-    await stakingContract.deposit(toBN(2000 * depositamount, 18));
+    await stakingContract.deposit(toBN(100 * depositamount, 18));
     var mydeposits = (await stakingContract.userInfo(owner.address))
       .NoOfDeposits;
     console.log(` my deps after are ${mydeposits}`);
