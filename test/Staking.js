@@ -154,7 +154,9 @@ describe("Staking contract", function () {
   });
 
   it("Should Initiate Claim correctly ", async function () {
-    await increaseTimeBy(23 * oneday);
+    await increaseTimeBy(1 * oneday);
+    console.log(await stakingContract.getDifferenceFromActionDay());
+    console.log(await currentTimeis());
 
     await expect(stakingContract.InitiateAction(0, 1)).not.to.be.reverted;
     var depInfo = await stakingContract.memberDeposit(owner.address, 0);

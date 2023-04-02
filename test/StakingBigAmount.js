@@ -42,7 +42,7 @@ describe("Staking contract", function () {
     console.log(await currentTimeis());
     //console.log(`deposit `);
     await stakingContract.deposit(toBN(1 * depositamount, 18));
-    await stakingContract.deposit(toBN(100 * depositamount, 18));
+    await stakingContract.deposit(toBN(150 * depositamount, 18));
     var mydeposits = (await stakingContract.userInfo(owner.address))
       .NoOfDeposits;
     console.log(` my deps after are ${mydeposits}`);
@@ -55,17 +55,18 @@ describe("Staking contract", function () {
       .NoOfDeposits;
     console.log(` my deps after unlock are ${mydeposits}`);
 
-    await increaseTimeBy(11 * oneday);
+    await increaseTimeBy(7 * oneday);
 
     var depInfo = await stakingContract.memberDeposit(owner.address, 1);
     console.log(depInfo);
 
     console.log((await stakingContract.getAllrewards()) / 10 ** 18);
     // console.log(await stakingContract.getDifferenceFromActionDay());
-    //console.log(await stakingContract.getDifferenceFromActionDay());
+
     console.log(`---------------------------`);
     console.log((await USDTContract.balanceOf(owner.address)) / 10 ** 18);
     await expect(stakingContract.Withdraw(1)).not.to.be.reverted;
+
     //await expect(stakingContract.Withdraw(11)).not.to.be.reverted;
     var mydepositsafter = (await stakingContract.userInfo(owner.address))
       .NoOfDeposits;
@@ -75,8 +76,9 @@ describe("Staking contract", function () {
     console.log(0, await stakingContract.memberDeposit(owner.address, 0));
     console.log(1, await stakingContract.memberDeposit(owner.address, 1));
     console.log(2, await stakingContract.memberDeposit(owner.address, 2));
-    await increaseTimeBy(44 * oneday);
-    //console.log(await stakingContract.getDifferenceFromActionDay());
+    await increaseTimeBy(36 * oneday);
+    console.log((await stakingContract.getAllrewards()) / 10 ** 18);
+    console.log(await stakingContract.getDifferenceFromActionDay());
     await expect(stakingContract.Withdraw(2)).not.to.be.reverted;
     console.log((await stakingContract.getAllrewards()) / 10 ** 18);
     //console.log((await USDTContract.balanceOf(owner.address)) / 10 ** 18);

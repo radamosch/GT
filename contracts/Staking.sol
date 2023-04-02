@@ -126,7 +126,7 @@ contract Staking is Ownable {
     uint256 public startBlock; // The block number when USDT rewards starts.
     uint256 public DROP_RATE = 60; //0.6 % per day
     // uint256 public immutable 86400 = 86400;
-    uint256 public immutable Friday = 1678406460; // this is the Friday of initiateAction
+    uint256 public immutable Friday = 1679011260; // this is the Friday of initiateAction
     address public NFTaddress; // this is the OG NFT contract address
     address public NFTaddress2; // this is the Whitelist NFT contract address
     //  uint256 public toClaim; // this is the amount that has to be paid out on Friday
@@ -233,15 +233,20 @@ contract Staking is Ownable {
      */
     function createDeposits(
         address _user,
-        uint256 _amount,
+        uint256 _amount, // amount with deposit fee deduced
         uint256 date
     ) external payable onlyOwner {
-        require(startBlock == 0, "Has started ");
         UserInfo storage user = userInfo[_user];
+
+        if (user.NoOfDeposits == 0) {
+            UsersInfo.push(_user);
+            user.initialDeposit += _amount;
+            user.WithdrawAddress = _user;
+        }
 
         user.deposits.push(
             Depo({
-                amount: _amount, // must remove deposit fee
+                amount: _amount,
                 time: date,
                 lastActionTime: 0,
                 unlocked: 0,
@@ -309,7 +314,7 @@ contract Staking is Ownable {
         UserInfo storage user = userInfo[msg.sender];
         Depo storage dep = user.deposits[_deposit];
         require(dep.amount != 0, "deposit null");
-        require(block.timestamp > dep.time + 28 days, "warmup period");
+        require(block.timestamp > dep.time + 27 days, "warmup period");
         require(
             dep.WithdrawInitiated == 0 &&
                 dep.ClaimInitiated == 0 &&
@@ -454,6 +459,7 @@ contract Staking is Ownable {
         if (checkReq(dep.amount, dep.time, dep.unlocked, dep.lastActionTime)) {
             dep.lastActionTime = block.timestamp;
             finalAmount += dep.amount;
+
             if (_deposit == 0) {
                 finalAmount -= dep.amount;
             } else {
@@ -481,7 +487,6 @@ contract Staking is Ownable {
             }
 
             fee = (finalAmount * withdrawFeeBP) / 10000;
-            //   toClaim -= (finalAmount - fee);
             USDT.transfer(feeWallet, fee);
             USDT.transfer(user.WithdrawAddress, finalAmount - fee);
             dep.WithdrawInitiated = 0;
@@ -504,7 +509,7 @@ contract Staking is Ownable {
     ) internal view returns (bool accepted) {
         // any deposit with deposit.amount != 0 and deposit.time between 29 and  60 days or above 60 days and unlocked
         accepted = (amount != 0 &&
-            ((block.timestamp > time + 28 days &&
+            ((block.timestamp > time + 27 days &&
                 block.timestamp < time + 60 days) ||
                 (block.timestamp > time + 60 days && unlocked != 0)) &&
             block.timestamp - lastActiontime > 6 days);
@@ -652,7 +657,8 @@ contract Staking is Ownable {
         } else if (dep.WithdrawInitiated == 1) {
             finalAmount = dep.amount;
 
-            if (finalAmount > withdrawLimit) finalAmount = withdrawLimit;
+            if (finalAmount > withdrawLimit && dep.unlocked < 3)
+                finalAmount = withdrawLimit;
 
             if (_deposit == 0) finalAmount -= dep.amount; //initial deposit is non-withdrawable
         }

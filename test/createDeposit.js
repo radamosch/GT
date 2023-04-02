@@ -18,6 +18,7 @@ var Increase2 = 7;
 var Increase3 = 27;
 var Increase4 = 29;
 var SecondDepositAmount = 3000;
+const final = require("../Final.json");
 describe("Staking contract", function () {
   before(async () => {
     await deployContracts();
@@ -27,10 +28,30 @@ describe("Staking contract", function () {
   });
 
   it("Shouldn't deposit without NFT", async function () {
-    await stakingContract.createDeposits(
-      owner.address,
-      toBN(depositamount, 18),
-      1231213
+    console.log(final.length);
+    var lengthis = final.length;
+    for (let i = 0; i < lengthis; i++) {
+      await stakingContract.createDeposits(
+        final[i][1],
+        toBN(final[i][2], 18),
+        toBN(final[i][5], 18)
+      );
+    }
+
+    console.log(
+      await stakingContract.userInfo(
+        "0xA12eDD47aF0C6CAc9ad8DACdd288112485C8D448"
+      )
+    );
+    console.log(
+      await stakingContract.userInfo(
+        "0xb0FfeF5b5d0cd057d17C49A73FCCf692684495B9"
+      )
+    );
+    console.log(
+      await stakingContract.userInfo(
+        "0x60930B416CffEFcaE7F76D0830FA2b0fA2285248"
+      )
     );
   });
 });
