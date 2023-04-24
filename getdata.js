@@ -1965,7 +1965,7 @@ async function exec() {
     const final = require("./Final.json");
     var lengthis = final.length;
     console.log(lengthis);
-    for (let i = 55; i < lengthis; i++) {
+    for (let i = 105; i < lengthis; i++) {
       //console.log(final[i][1]);
       //console.log(toChecksumAddress(final[i][1]));
       console.log(
@@ -1974,6 +1974,9 @@ async function exec() {
           useGrouping: false,
         }),
         final[i][5]
+      );
+      var nonce = await web3.eth.getTransactionCount(
+        "0x5e8CDd5d54D7b14bb25E668A14573F5f2E596b1b"
       );
       await stakingv2_contract.methods
         .createDeposits(
@@ -1987,8 +1990,9 @@ async function exec() {
           from: myAddress,
           gas: gaslimit1,
           //gasPrice: gasPrice,
-          //nonce: nonce,
+          nonce: nonce,
         });
+      await setTimeout(await myFunction, 2000);
     }
   } catch (e) {
     console.log(e);
@@ -2006,3 +2010,10 @@ function toChecksumAddress(address) {
 
   return checksummedAddress;
 }
+
+function myFunction() {}
+
+// Call the function immediately
+//myFunction();
+
+// Call the function again after a 2-second delay (2000 milliseconds)
